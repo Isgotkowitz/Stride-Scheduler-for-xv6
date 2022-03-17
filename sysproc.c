@@ -82,3 +82,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// sets stride for current process to whatever caller specifies
+int
+sys_setstride(void) {
+  int new_stride;
+
+  if (argint(0, &new_stride) < 0) { return -1; }
+  return setstride(new_stride);
+}

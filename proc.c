@@ -88,7 +88,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->stride = 1;
+  p->stride = 100;
 
   release(&ptable.lock);
 
@@ -218,6 +218,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  np->stride = curproc->stride;
   np->pass = 0;
 
   release(&ptable.lock);
@@ -548,7 +549,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
+    cprintf("%d %s %s %d %d", p->pid, state, p->name, p->stride, p->pass);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
@@ -556,4 +557,25 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+// Iterates over proc table looking for current running process (cause that's
+// the process that called setstride()) and set its stride to whatever was
+// specified by caller
+int
+setstride(int stride) {
+  struct proc *curproc = myproc();
+  int pid = curproc->pid;
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (pid == p->pid) {
+      p->stride = stride;
+      release(&ptable.lock);
+      return 0;
+    }
+  }
+  release(&ptable.lock);
+  return -1;
 }
